@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bet Form</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { font-family: Arial; background: #f4f6f9; }
+  .container { width: 350px; margin: 50px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+  input, button { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; }
+  button { cursor: pointer; border: none; background-color: #2c7be5; color: white; border-radius: 6px; }
+  button:hover { background-color: #1a5bb8; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>Add Bet</h2>
+
+  <label>Stake:</label>
+  <input type="number" id="stake">
+
+  <label>Date:</label>
+  <input type="date" id="betDate">
+
+  <label>Odd:</label>
+  <input type="number" id="odd" step="0.01">
+
+  <button onclick="saveBet()">Submit</button>
+  <button onclick="goToTable()" style="background-color: #555;">View Bet History</button>
+</div>
+
+<script>
+function saveBet() {
+  let stake = parseFloat(document.getElementById("stake").value);
+  let odd = parseFloat(document.getElementById("odd").value);
+  let date = document.getElementById("betDate").value;
+
+  if (!stake || !odd || !date) {
+    alert("Please enter stake, date, and odd");
+    return;
+  }
+
+  let bet = {
+    stake: stake,
+    odd: odd,
+    toWin: "",
+    status: "pending",
+    date: date
+  };
+
+  let bets = JSON.parse(localStorage.getItem("bets")) || [];
+  bets.push(bet);
+  localStorage.setItem("bets", JSON.stringify(bets));
+
+  window.location.href = "table.html";
+}
+
+function goToTable() {
+  window.location.href = "table.html";
+}
+</script>
+</body>
+</html>

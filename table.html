@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bet Records</title>
+    <style>
+      body {
+        background: #f4f6f9;
+        font-family: Arial;
+      }
+      .container {
+        width: 90%;
+        margin: 40px auto;
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 24pt;
+        font-family: arial;
+        font-weight: bold;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 20px;
+      }
+      th {
+        background-color: #2c7be5;
+        color: white;
+        padding: 12px;
+      }
+      td {
+        padding: 10px;
+        text-align: center;
+      }
+      tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+      .win {
+        background-color: #d4edda !important;
+        color: #155724;
+        font-weight: bold;
+      }
+      .lose {
+        background-color: #f8d7da !important;
+        color: #721c24;
+        font-weight: bold;
+      }
+      .pending {
+        background-color: white !important;
+        color: black;
+        font-weight: normal;
+      }
+      button {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin: 2px;
+      }
+      .edit-btn {
+        background: #ffc107;
+      }
+      .update-btn {
+        background: #28a745;
+        color: white;
+      }
+      .delete-btn {
+        background: #dc3545;
+        color: white;
+      }
+      .edit-btn:hover,
+      .update-btn:hover,
+      .delete-btn:hover {
+        opacity: 0.8;
+      }
+      .back-btn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background: #333;
+        color: white;
+      }
+      #results {
+        margin-top: 20px;
+        font-size: 18px;
+        font-weight: bold;
+      }
+      select {
+        padding: 5px 8px;
+        border-radius: 6px;
+        font-size: 16px;
+      }
+      input[type="number"] {
+        width: 80px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Hout Betting History</h2>
+      <br />
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        "
+      >
+        <div>
+          <button class="back-btn" onclick="goBack()">Add New Bet</button>
+          <button
+            class="back-btn"
+            onclick="exportToExcel()"
+            style="background-color: #2ca02c"
+          >
+            Export to Excel
+          </button>
+        </div>
+        <div id="results">
+          Total Win: $0 | Total Lose: $0 | Final Result: $0
+        </div>
+      </div> <br>
+      <table id="betTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Stake ($)</th>
+            <th>Odd</th>
+            <th>Total ($)</th>
+            <th>To Win ($)</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script>
+      let bets = JSON.parse(localStorage.getItem("bets")) || [];
+      const tableBody = document.querySelector("#betTable tbody");
+      const resultsDiv = document.getElementById("results");
+
+      function renderTable() {
+        tableBody.innerHTML = "";
+        let totalWin = 0,
+          totalLose = 0;
+
+        bets.forEach((bet, index) => {
+          const total = bet.stake * bet.odd;
+          let toWin = parseFloat(bet.toWin);
+          if (isNaN(toWin)) toWin = 0;
+          let status = bet.status || "pending";
+
+          if (status === "win") totalWin += toWin;
+          if (status === "lose") totalLose += bet.stake;
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${bet.date}</td>
+            <td class="stake">$${bet.stake.toFixed(2)}</td>
+            <td class="odd">${bet.odd}</td>
+            <td>$${total.toFixed(2)}</td>
+            <td class="toWin">${toWin}</td>
+            <td>
+              <select onchange="updateStatusDropdown(this, ${index})">
+                <option value="pending" ${status === "pending" ? "selected" : ""}>Pending</option>
+                <option value="win" ${status === "win" ? "selected" : ""}>Win</option>
+                <option value="lose" ${status === "lose" ? "selected" : ""}>Lose</option>
+              </select>
+            </td>
+            <td>
+              <button class="edit-btn" onclick="editRow(${index})">Edit</button>
+              <button class="update-btn" onclick="updateRow(${index})">Update</button>
+              <button class="delete-btn" onclick="deleteRow(${index})">Delete</button>
+            </td>
+          `;
+          row.classList.remove("win", "lose", "pending");
+          row.classList.add(status);
+
+          tableBody.appendChild(row);
+        });
+
+        const finalResult = totalWin - totalLose;
+        resultsDiv.innerHTML =
+          `Total Win: <span style="color:orange">$${totalWin.toFixed(2)}</span> | ` +
+          `Total Lose: <span style="color:blue">$${totalLose.toFixed(2)}</span> | ` +
+          `Final Result: <span style="color:${finalResult >= 0 ? "green" : "red"}">$${finalResult.toFixed(2)}</span>`;
+      }
+
+      function updateStatusDropdown(select, index) {
+        bets[index].status = select.value;
+        localStorage.setItem("bets", JSON.stringify(bets));
+        renderTable();
+      }
+
+      function deleteRow(index) {
+        bets.splice(index, 1);
+        localStorage.setItem("bets", JSON.stringify(bets));
+        renderTable();
+      }
+
+      function editRow(index) {
+        const row = tableBody.rows[index];
+        row.cells[1].innerHTML = `<input type="number" value="${bets[index].stake}">`;
+        row.cells[2].innerHTML = `<input type="number" value="${bets[index].odd}" step="0.01">`;
+        row.cells[4].innerHTML = `<input type="number" value="${bets[index].toWin || ""}">`;
+      }
+
+      function updateRow(index) {
+        const row = tableBody.rows[index];
+        const newStake = parseFloat(row.cells[1].querySelector("input").value);
+        const newOdd = parseFloat(row.cells[2].querySelector("input").value);
+        const newToWin = row.cells[4].querySelector("input").value;
+        if (!newStake || !newOdd) {
+          alert("Invalid values");
+          return;
+        }
+        bets[index].stake = newStake;
+        bets[index].odd = newOdd;
+        bets[index].toWin = newToWin;
+        localStorage.setItem("bets", JSON.stringify(bets));
+        renderTable();
+      }
+
+      function goBack() {
+        window.location.href = "index.html";
+      }
+
+      // ✅ Export to Excel with centered text and colored status
+      function exportToExcel() {
+        if (bets.length === 0) {
+          alert("No data to export!");
+          return;
+        }
+
+        let html = `
+          <table border="1" style="border-collapse:collapse; text-align:center;">
+            <tr style="background-color:#2c7be5; color:white;">
+              <th>Date</th><th>Stake ($)</th><th>Odd</th><th>Total ($)</th><th>To Win ($)</th><th>Status</th>
+            </tr>
+        `;
+
+        bets.forEach((bet) => {
+          const total = (bet.stake * bet.odd).toFixed(2);
+          const statusColor =
+            bet.status === "win"
+              ? "green"
+              : bet.status === "lose"
+                ? "red"
+                : "black";
+
+          html += `
+            <tr>
+              <td>${bet.date}</td>
+              <td>${bet.stake}</td>
+              <td>${bet.odd}</td>
+              <td>${total}</td>
+              <td>${bet.toWin || 0}</td>
+              <td style="color:${statusColor}; font-weight:bold;">${bet.status}</td>
+            </tr>
+          `;
+        });
+
+        html += `</table>`;
+
+        const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "HoutBettingHistory.xls";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      renderTable();
+    </script>
+  </body>
+</html>
